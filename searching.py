@@ -1,3 +1,17 @@
+# Copyright 2019 Weicheng Li, Beihang University. All Rights Reserved.
+#
+# Licensed under the GNU License, Version 3 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.gnu.org/licenses/gpl-3.0.html
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ==============================================================================
 import numpy as np
 import tensorflow as tf
 from tensorflow.python.platform import gfile
@@ -5,7 +19,6 @@ from tensorflow.python.framework import tensor_util
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Input, Conv2D, AveragePooling2D, Activation, ReLU
 from tensorflow.keras.layers import BatchNormalization, add, Flatten, DepthwiseConv2D
-#from keras.utils.vis_utils import plot_model
 import pickle
 import time
 
@@ -159,10 +172,6 @@ def choose_num_filters(layer_num, speedup, org_filters, new_filters, table_resul
 
   for n in range(new_filters[layer_num], least_number, -1):
     #reduce filters in current layer --> reduce in_channels in next layer
-    '''if (layer_num != 0 and layer_num != 1 and layer_num != 2 and layer_num != 4 and layer_num != 7 and layer_num != 11 and layer_num != 14):
-      new_filters[layer_num] = n
-      new_filters[layer_num-1] = n
-      layer_new_time = count_delay(org_num_layers, new_filters, table_result)'''
     
     if layer_num == 2:
       #print("modify 2 layer due to add op")
@@ -237,11 +246,8 @@ def weights_prune(layer_num, old_weights, new_filters):
           #tmp = sess.run(tmp)
           #sess.close()
           #tf.reset_default_graph()
+          #l2_old_weights[i][j][k] = tmp  
 
-          #l2_old_weights[i][j][k] = tmp          
-          #max_idx = np.sort(np.array(list(map(l2_old_weights[i][j][k].tolist().index,
-                            #heapq.nlargest(new_filters[layer_num], l2_old_weights[i][j][k])))))
-          #max_idx = np.zeros((len(l2_old_weights[i][j][k])), dtype=int)
           max_idx = np.argsort(-l2_old_weights[i][j][k])
           #print(max_idx)
 
@@ -266,10 +272,10 @@ def weights_prune(layer_num, old_weights, new_filters):
       prj_c = new_filters[layer_num-1]
     else:
       prj_c = new_filters[layer_num-1]*6
-    #print("**CHECK CHANNEL PJC")
+    #print("**CHECK CHANNEL PRJ")
     #print(prj_c)
     #print(len(old_weights[(layer_num-1)*2+19][0][0]))
-    #print("CHECK CHANNEL PJC**")
+    #print("CHECK CHANNEL PRJ**")
     new_weights_val = np.zeros((len(old_weights[(layer_num-1)*2+19]),len(old_weights[(layer_num-1)*2+19][0]),
                             prj_c,new_filters[layer_num]), dtype='float32')
     l2_old_weights = np.zeros((len(old_weights[(layer_num-1)*2+19]),len(old_weights[(layer_num-1)*2+19][0]),
@@ -286,11 +292,8 @@ def weights_prune(layer_num, old_weights, new_filters):
           #tmp = sess.run(tmp)
           #sess.close()
           #tf.reset_default_graph()
-
           #l2_old_weights[i][j][k] = tmp
-          #max_idx = np.sort(np.array(list(map(l2_old_weights[i][j][k].tolist().index,
-          #                  heapq.nlargest(new_filters[layer_num], l2_old_weights[i][j][k])))))
-          #max_idx = np.zeros((len(l2_old_weights[i][j][k])), dtype=int)
+
           max_idx = np.argsort(-l2_old_weights[i][j][k])
           #print(max_idx)
 
@@ -344,11 +347,8 @@ def weights_prune(layer_num, old_weights, new_filters):
             #tmp = sess.run(tmp)
             #sess.close()
             #tf.reset_default_graph()
-
             #l2_old_weights[i][j][k] = tmp
-            #max_idx = np.sort(np.array(list(map(l2_old_weights[i][j][k].tolist().index,
-            #                  heapq.nlargest(new_filters[layer_num]*6, l2_old_weights[i][j][k])))))
-            #max_idx = np.zeros((len(l2_old_weights[i][j][k])), dtype=int)
+
             max_idx = np.argsort(-l2_old_weights[i][j][k])
             #print(max_idx)
 
@@ -395,11 +395,8 @@ def weights_prune(layer_num, old_weights, new_filters):
         #tmp = sess.run(tmp)
         #sess.close()
         #tf.reset_default_graph()
-
         #l2_rsp_old_weights[i][j][0] = tmp
-        #max_idx = np.sort(np.array(list(map(l2_rsp_old_weights[i][j][0].tolist().index,
-                          #heapq.nlargest(dw_c, l2_rsp_old_weights[i][j][0])))))
-        #max_idx = np.zeros((len(l2_rsp_old_weights[i][j][0])), dtype=int)
+
         max_idx = np.argsort(-l2_rsp_old_weights[i][j][0])
         #print(max_idx)
 
@@ -449,8 +446,6 @@ def train(new_filters, retrain=True, short_term=True, weights=None):
     print("Training using multiple GPUs...")
   except:
     print("Training using single GPU...")
-  #model.compile(loss=tf.keras.losses.categorical_crossentropy,
-                #optimizer=tf.train.RMSPropOptimizer(0.0005, decay=0.9), metrics=[tf.keras.metrics.categorical_accuracy])
 
   if short_term == False:
     print("isLong_term!!!!!!!!!")
@@ -467,9 +462,6 @@ def train(new_filters, retrain=True, short_term=True, weights=None):
 
   if retrain == True:
     print("isRetrain!!!!!!!!!")
-    #model = MobileNetv2(new_filters, 10)
-    #model.compile(loss=tf.keras.losses.categorical_crossentropy,
-    #              optimizer=tf.train.RMSPropOptimizer(0.0005, decay=0.9), metrics=[tf.keras.metrics.categorical_accuracy])
                   
     for i in range(17):
       train_weights.append(weights[18+i*2])
@@ -507,9 +499,6 @@ def train(new_filters, retrain=True, short_term=True, weights=None):
 
   else:
     print("isPretrain!!!!!!!!!")
-    #model = tf.keras.models.load_model('my_model.h5')
-    #model.compile(loss=tf.keras.losses.categorical_crossentropy,
-                  #optimizer=tf.train.RMSPropOptimizer(0.0005, decay=0.9), metrics=[tf.keras.metrics.categorical_accuracy])
     model.load_weights('./data/mobilenetv2_pretrained_cifar10')
     
     #model.fit(x_train, y_train, epochs=epochs, batch_size=96)
@@ -555,7 +544,7 @@ if __name__ == '__main__':
   
   #1.5->1.3-->18; 2.0->1.5-->24; 2.5->2.0-->30
   tgt_speedup_ratio = 2
-  num_iters = 48
+  num_iters = 24
 
   f = open('./simulator/sim_data/CPU_sim_latency.pickle', 'rb')
   table_result = pickle.load(f)
@@ -566,7 +555,7 @@ if __name__ == '__main__':
   print(base_time)
 
   speedup_per_iter = (base_time - base_time/tgt_speedup_ratio) / num_iters
-  print("speedup_per_iter: %lf * 0.98^n" % (speedup_per_iter))
+  print("speedup_per_iter: %lf * 0.96^n" % (speedup_per_iter))
   #print(speedup_per_iter)
 
   new_filters = org_filters
@@ -584,7 +573,7 @@ if __name__ == '__main__':
   
     tmp_filters = []
     tmp_weights = []
-    speedup_per_iter = speedup_per_iter*0.98
+    speedup_per_iter = speedup_per_iter*0.96
     
     print("\n\nnum_iters:")
     print(n+1)

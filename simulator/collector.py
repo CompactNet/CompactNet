@@ -1,3 +1,17 @@
+# Copyright 2019 Weicheng Li, Beihang University. All Rights Reserved.
+#
+# Licensed under the GNU License, Version 3 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.gnu.org/licenses/gpl-3.0.html
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ==============================================================================
 import tensorflow as tf
 import numpy as np
 import time
@@ -186,7 +200,6 @@ def make_table(num_layers, max_num_filters):
         print("***********%d filters with 3 input_channels-->time_delay: %fms" % (i,table_val[i-1][0]))
         #print(table_val[i-1][0])
 
-      #lookup_table.append(table_val)
       #print(lookup_table)      
 
     else:
@@ -230,10 +243,6 @@ if __name__ == '__main__':
   
   table_1 = make_table(num_layers, max_num_filters)
   table_2 = make_table(num_layers, max_num_filters)
-
-  #f = open('./table_2.pickle', 'wb')
-  #pickle.dump(table_1, f)
-  #f.close()
   
   np.set_printoptions(threshold=np.nan)
   np_lookup_table = np.array(table_1)
@@ -242,15 +251,6 @@ if __name__ == '__main__':
   np.set_printoptions(threshold=np.nan)
   np_lookup_table = np.array(table_2)
   #np.savetxt("CPU_Celeron:table_2.txt", np_lookup_table, fmt='%s', delimiter=',')
-  
-  #f1 = open('./table_1.pickle', 'rb')
-  #f2 = open('./table_2.pickle', 'rb')
-  #table_1 = pickle.load(f1)
-  #table_2 = pickle.load(f2)
-  #f1.close()
-  #f2.close()
-
-  #print(len(table_1))
 
   for n in range(len(table_1)):
     #print(len(table_1[n]))

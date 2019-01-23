@@ -1,3 +1,17 @@
+# Copyright 2019 Weicheng Li, Beihang University. All Rights Reserved.
+#
+# Licensed under the GNU License, Version 3 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.gnu.org/licenses/gpl-3.0.html
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ==============================================================================
 import tensorflow as tf
 import numpy as np
 import time
@@ -8,32 +22,28 @@ def measure_time(layer_num, num_filters, num_input_channels):
   delay_list = [None]*10
 
   if layer_num == 0:  
-    #x = tf.random.uniform([1,224,224,num_input_channels], 0, 225)
     x = np.random.uniform(0,255,(1, 224, 224, num_input_channels))
     x = x.astype('float32')
     x = tf.constant(x)
 
-    #expand_filter_val = tf.random.uniform([3,3,num_input_channels,num_filters], 1, 8)
     expand_filter_val = np.random.uniform(1, 8,(3, 3, num_input_channels, num_filters))
     expand_filter_val = expand_filter_val.astype('float32')
     expand_filter_val = tf.constant(expand_filter_val)
 
-    #para_val = tf.random.uniform([num_filters], 10, 20)
     para_val = np.random.uniform(10, 20, (num_filters))
     para_val = para_val.astype('float32')
     para_val = tf.constant(para_val)
 
-    #dw_filter_val = tf.random.uniform([3,3,num_filters,1], 1, 8)
     dw_filter_val = np.random.uniform(1, 8,(3, 3, num_filters, 1))
     dw_filter_val = dw_filter_val.astype('float32')
     dw_filter_val = tf.constant(dw_filter_val)
     
-    with tf.device("/device:GPU:0"):
+    with tf.device("/cpu:0"):
       for i in range(10):          
         start = time.perf_counter()
 
         expand_conv = tf.nn.conv2d(input=x, filter=expand_filter_val,
-                      strides=[1,2,2,1], padding="SAME", use_cudnn_on_gpu=True)
+                      strides=[1,2,2,1], padding="SAME", use_cudnn_on_gpu=False)
         expand_BN = tf.nn.bias_add(expand_conv, para_val)
         expand_relu = tf.nn.relu6(expand_BN)
         dw_conv = tf.nn.depthwise_conv2d_native(expand_relu, dw_filter_val,
@@ -43,61 +53,46 @@ def measure_time(layer_num, num_filters, num_input_channels):
         dw_relu = tf.nn.relu6(dw_BN[0])
         #print(dw_relu)
 
-        #sess = tf.Session()
-        #start = time.perf_counter()
-        #sess.run(dw_relu)
         delay_list[i] = time.perf_counter()-start
-        #sess.close()
-        #tf.reset_default_graph()
 
       #print(delay_list)
       time_delay = min(delay_list) * 1000
 
   elif layer_num == 17:
-    #x = tf.random.uniform([1,7,7,num_input_channels], 0, 225)
     x = np.random.uniform(0,255,(1, 7, 7, num_input_channels))
     x = x.astype('float32')
     x = tf.constant(x) 
 
-    #project_filter_val = tf.random.uniform([1,1,num_input_channels,num_filters], 1, 8)
     project_filter_val = np.random.uniform(1, 8,(1, 1, num_input_channels, num_filters))
     project_filter_val = project_filter_val.astype('float32')
     project_filter_val = tf.constant(project_filter_val)
 
-    #para_val = tf.random.uniform([num_filters], 10, 20)
     para_val = np.random.uniform(10, 20, (num_filters))
     para_val = para_val.astype('float32')
     para_val = tf.constant(para_val)
 
-    #expand_filter_val = tf.random.uniform([1,1,num_filters,1280], 1, 8)
     expand_filter_val = np.random.uniform(1, 8,(1, 1, num_filters, 1280))
     expand_filter_val = expand_filter_val.astype('float32')
     expand_filter_val = tf.constant(expand_filter_val)
 
-    #expand_para_val = tf.random.uniform([1280], 10, 20)
     expand_para_val = np.random.uniform(10, 20, (1280))
     expand_para_val = expand_para_val.astype('float32')
     expand_para_val = tf.constant(expand_para_val)
     
-    with tf.device("/device:GPU:0"):     
+    with tf.device("/cpu:0"):     
       for i in range(10):
         start = time.perf_counter()
 
         project_conv = tf.nn.conv2d(input=x, filter=project_filter_val,
-                      strides=[1,1,1,1], padding="SAME", use_cudnn_on_gpu=True)
+                      strides=[1,1,1,1], padding="SAME", use_cudnn_on_gpu=False)
         project_BN = tf.nn.bias_add(project_conv, para_val)
         
         expand_conv = tf.nn.conv2d(input=project_BN, filter=expand_filter_val,
-                      strides=[1,1,1,1], padding="SAME", use_cudnn_on_gpu=True)
+                      strides=[1,1,1,1], padding="SAME", use_cudnn_on_gpu=False)
         expand_BN = tf.nn.bias_add(expand_conv, expand_para_val)
         expand_relu = tf.nn.relu6(expand_BN)
 
         delay_list[i] = time.perf_counter()-start
-
-      #for i in range(10): 
-        #start = time.perf_counter()
-        #sess.run(expand_relu)
-        #delay_list[i] = time.perf_counter()-start
 
       time_delay = min(delay_list) * 1000
 
@@ -118,51 +113,45 @@ def measure_time(layer_num, num_filters, num_input_channels):
     else:
       dw_strides_val = [1,1,1,1]
 
-    #x = tf.random.uniform([1,input_dim,input_dim,num_input_channels], 0, 225)
     x = np.random.uniform(0, 255,(1, input_dim, input_dim, num_input_channels))
     x = x.astype('float32')
     x = tf.constant(x)
 
-    #project_filter_val = tf.random.uniform([1,1,num_input_channels,num_filters], 1, 8)
     project_filter_val = np.random.uniform(1, 8,(1, 1, num_input_channels, num_filters))
     project_filter_val = project_filter_val.astype('float32')
     project_filter_val = tf.constant(project_filter_val)
 
-    #para_val = tf.random.uniform([num_filters], 10, 20)
     para_val = np.random.uniform(10, 20, (num_filters))
     para_val = para_val.astype('float32')
     para_val = tf.constant(para_val)
 
-    #expand_filter_val = tf.random.uniform([1,1,num_filters,num_filters*6], 1, 8)
     expand_filter_val = np.random.uniform(1, 8,(1, 1, num_filters, num_filters*6))
     expand_filter_val = expand_filter_val.astype('float32')
     expand_filter_val = tf.constant(expand_filter_val)
 
-    #para_val_b = tf.random.uniform([num_filters*6], 10, 20)
     para_val_b = np.random.uniform(10, 20, (num_filters*6))
     para_val_b = para_val_b.astype('float32')
     para_val_b = tf.constant(para_val_b)
 
-    #dw_filter_val = tf.random.uniform([3,3,num_filters*6,1], 1, 8)
     dw_filter_val = np.random.uniform(1, 8,(3, 3, num_filters*6, 1))
     dw_filter_val = dw_filter_val.astype('float32')
     dw_filter_val = tf.constant(dw_filter_val)
     
-    with tf.device("/device:GPU:0"):      
+    with tf.device("/cpu:0"):      
       for i in range(10):
         start = time.perf_counter()
 
         project_conv = tf.nn.conv2d(input=x, filter=project_filter_val,
-                      strides=[1,1,1,1], padding="SAME", use_cudnn_on_gpu=True)
+                      strides=[1,1,1,1], padding="SAME", use_cudnn_on_gpu=False)
         project_BN = tf.nn.bias_add(project_conv, para_val)
         
         if(layer_num != 1 and layer_num != 2 and layer_num != 4 and layer_num != 7 and layer_num != 11 and layer_num != 14):
           Add = tf.math.add(project_BN, project_BN)
           expand_conv = tf.nn.conv2d(input=Add, filter=expand_filter_val,
-                        strides=[1,1,1,1], padding="SAME", use_cudnn_on_gpu=True)
+                        strides=[1,1,1,1], padding="SAME", use_cudnn_on_gpu=False)
         else:
           expand_conv = tf.nn.conv2d(input=project_BN, filter=expand_filter_val,
-                        strides=[1,1,1,1], padding="SAME", use_cudnn_on_gpu=True)
+                        strides=[1,1,1,1], padding="SAME", use_cudnn_on_gpu=False)
                         
         expand_BN = tf.nn.bias_add(expand_conv, para_val_b)
         expand_relu = tf.nn.relu6(expand_BN)
@@ -175,16 +164,8 @@ def measure_time(layer_num, num_filters, num_input_channels):
 
         delay_list[i] = time.perf_counter()-start
 
-      #for i in range(10):  
-        #start = time.perf_counter()
-        #sess.run(dw_relu)
-        #delay_list[i] = time.perf_counter()-start
-
       time_delay = min(delay_list) * 1000
      
-  #sess.close()
-  #tf.reset_default_graph()
-
   return time_delay
 
 
@@ -207,7 +188,6 @@ def make_table(num_layers, max_num_filters):
         print("***********%d filters with 3 input_channels-->time_delay: %fms" % (i,table_val[i-1][0]))
         #print(table_val[i-1][0])
 
-      #lookup_table.append(table_val)
       #print(lookup_table)      
 
     else:
@@ -252,10 +232,6 @@ if __name__ == '__main__':
   table_1 = make_table(num_layers, max_num_filters)
   table_2 = make_table(num_layers, max_num_filters)
 
-  #f = open('./table_2.pickle', 'wb')
-  #pickle.dump(table_1, f)
-  #f.close()
-  
   np.set_printoptions(threshold=np.nan)
   np_lookup_table = np.array(table_1)
   #np.savetxt("CPU_224:table_1.txt", np_lookup_table, fmt='%s', delimiter=',')
@@ -263,15 +239,6 @@ if __name__ == '__main__':
   np.set_printoptions(threshold=np.nan)
   np_lookup_table = np.array(table_2)
   #np.savetxt("CPU_224:table_2.txt", np_lookup_table, fmt='%s', delimiter=',')
-  
-  #f1 = open('./table_1.pickle', 'rb')
-  #f2 = open('./table_2.pickle', 'rb')
-  #table_1 = pickle.load(f1)
-  #table_2 = pickle.load(f2)
-  #f1.close()
-  #f2.close()
-
-  #print(len(table_1))
 
   for n in range(len(table_1)):
     #print(len(table_1[n]))
