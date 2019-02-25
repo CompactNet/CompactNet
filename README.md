@@ -1,5 +1,5 @@
 # CompactNet
-Purposive and Platform-Aware Optimization for Convolutional Neural Network
+Platform-Aware Automatic Optimization for Convolutional Neural Network
 
 Convolutional Neural Network (CNN) based Deep
 Learning (DL) has achieved great progress on many
@@ -7,21 +7,21 @@ real-life applications. Meanwhile, due to the complex
 model structure against strict latency and memory
 restriction, the implementation of CNN models on
 the resource-limited platform is becoming more challenging.
-This work proposes a solution, called CompactNet,
+This work proposes a solution, called CompactNet1,
 that automatically optimize a pre-trained
 CNN model to be deployed on a specific resourcelimited
 platform given a specific target of inference
 speedup. Driven by a simulator of the target platform,
-CompactNet purposively and progressively trims a
-pre-trained network (by removing certain redundant
-filters) until the target speedup is met and generate
+CompactNet and progressively trims a pretrained
+network (by removing certain redundant filters)
+until the target speedup is met and generate
 an optimal platform-specific model while maintaining
 the accuracy. We deploy our work on a smartphone
 with two backend platforms of a mobile CPU
 and a domain-specific accelerator. For image classification
 on the Cifar-10 dataset, CompactNet achieves
 up to a 1.8x kernel computation speedup with equal or
-even higher accuracy compared with the state-of-the-art
+even higher accuracy compared with the state-of-theart
 slim CNN model made for the embedded platform
 – MobileNetV2.
 
