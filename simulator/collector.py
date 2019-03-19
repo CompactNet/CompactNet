@@ -251,6 +251,7 @@ def make_table(num_layers, max_num_filters):
 
 
 if __name__ == '__main__':
+  #MobileNetV2 Model: 18 layers with diff # of filters
   num_layers = 18
   max_num_filters = [32,16,24,24,32,32,32,64,64,64,64,96,96,96,160,160,160,320]
   
