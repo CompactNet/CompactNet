@@ -233,8 +233,8 @@ def choose_num_filters(layer_num, speedup, org_filters, new_filters, table_resul
     return org_num
 
   
-  #trimming approach
-  def weights_prune(layer_num, old_weights, new_filters):
+#trimming approach
+def weights_prune(layer_num, old_weights, new_filters):
   print("pruning weights in %dth layer..." % (layer_num+1))
   
   #trim 1st layer:
