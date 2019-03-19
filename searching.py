@@ -22,11 +22,15 @@ from tensorflow.keras.layers import BatchNormalization, add, Flatten, DepthwiseC
 import pickle
 import time
 
+#MobileNetV2 Model: 18 layers with diff # of filters
 org_num_layers = 18
+
+#import dataset
 (x_train, y_train), (x_test, y_test) = tf.keras.datasets.cifar10.load_data()
 y_train = tf.keras.utils.to_categorical(y_train, 10)
 y_test = tf.keras.utils.to_categorical(y_test, 10)
 
+#1st layer of MobilNetV2
 def layer_0(inputs, filters):
   channel_axis = -1
 
@@ -45,6 +49,7 @@ def layer_0(inputs, filters):
   return x
 
 
+#bottleneck layers of MobileNetV2
 def bottleneck_layer(layer_num, inputs, filters):
   channel_axis = -1
 
@@ -69,6 +74,7 @@ def bottleneck_layer(layer_num, inputs, filters):
   return x
 
 
+#MonileNetV2 model implement
 def MobileNetv2(new_filters, k):
   inputs = Input(shape=(32,32,3)) 
   x = layer_0(inputs, new_filters)
@@ -94,6 +100,7 @@ def MobileNetv2(new_filters, k):
   return model
 
 
+#get weights from a pre-trained model
 def get_weights():
   GRAPH_PB_PATH = './data/mobilenet_v2/mobilenetv2_1.0_224_imagenet.pb' #path to your .pb file
   print("load graph")
@@ -142,6 +149,7 @@ def get_weights():
   return weights
 
 
+#simulate latency of a trimmed model
 def count_delay(num_layers, num_filters, table_result):
   #print(table_result[0][num_filters[0]-1][0],'ms')
   time_delay = table_result[0][num_filters[0]-1][0]
@@ -155,8 +163,8 @@ def count_delay(num_layers, num_filters, table_result):
   return time_delay
 
 
+#decide # of filters remains in a layer according to the simulator data
 def choose_num_filters(layer_num, speedup, org_filters, new_filters, table_result):
-
   layer_base_time = count_delay(org_num_layers, new_filters, table_result)
   org_num = new_filters[layer_num]
   #print(layer_num)
@@ -224,10 +232,12 @@ def choose_num_filters(layer_num, speedup, org_filters, new_filters, table_resul
     new_filters[layer_num] = org_num
     return org_num
 
-
-def weights_prune(layer_num, old_weights, new_filters):
+  
+  #trimming approach
+  def weights_prune(layer_num, old_weights, new_filters):
   print("pruning weights in %dth layer..." % (layer_num+1))
   
+  #trim 1st layer:
   if layer_num == 0:
     # conv2d
     new_weights_val = np.zeros((len(old_weights[18]),len(old_weights[18][0]),
@@ -240,14 +250,8 @@ def weights_prune(layer_num, old_weights, new_filters):
       for j in range(len(old_weights[18][i])):
         for k in range(len(old_weights[18][i][j])):
                 
-          #tmp = tf.math.l2_normalize(old_weights[18][i][j][k])
+          #choose filters with largest l2_norm remain
           l2_old_weights[i][j][k] = old_weights[18][i][j][k] / np.sqrt(np.sum(np.square(old_weights[18][i][j][k])))
-          #sess = tf.Session()
-          #tmp = sess.run(tmp)
-          #sess.close()
-          #tf.reset_default_graph()
-          #l2_old_weights[i][j][k] = tmp  
-
           max_idx = np.argsort(-l2_old_weights[i][j][k])
           #print(max_idx)
 
@@ -266,6 +270,7 @@ def weights_prune(layer_num, old_weights, new_filters):
     print("pruned conv_BN params:")
     print(old_weights[54].shape)
 
+  #trim other layers:
   elif layer_num>0:
     #pjc_conv
     if layer_num == 1:
@@ -286,13 +291,8 @@ def weights_prune(layer_num, old_weights, new_filters):
       for j in range(len(old_weights[(layer_num-1)*2+19][i])):
         for k in range(len(old_weights[(layer_num-1)*2+19][i][j])):
                 
-          #tmp = tf.math.l2_normalize(old_weights[(layer_num-1)*2+19][i][j][k])
+          #choose filters with largest l2_norm remain
           l2_old_weights[i][j][k] = old_weights[(layer_num-1)*2+19][i][j][k] / np.sqrt(np.sum(np.square(old_weights[(layer_num-1)*2+19][i][j][k])))
-          #sess = tf.Session()
-          #tmp = sess.run(tmp)
-          #sess.close()
-          #tf.reset_default_graph()
-          #l2_old_weights[i][j][k] = tmp
 
           max_idx = np.argsort(-l2_old_weights[i][j][k])
           #print(max_idx)
@@ -341,13 +341,8 @@ def weights_prune(layer_num, old_weights, new_filters):
         for j in range(len(old_weights[(layer_num-1)*2+20][i])):
           for k in range(len(old_weights[(layer_num-1)*2+20][i][j])):
                   
-            #tmp = tf.math.l2_normalize(old_weights[(layer_num-1)*2+20][i][j][k])
+            #choose filters with largest l2_norm remain
             l2_old_weights[i][j][k] = old_weights[(layer_num-1)*2+20][i][j][k] / np.sqrt(np.sum(np.square(old_weights[(layer_num-1)*2+20][i][j][k])))
-            #sess = tf.Session()
-            #tmp = sess.run(tmp)
-            #sess.close()
-            #tf.reset_default_graph()
-            #l2_old_weights[i][j][k] = tmp
 
             max_idx = np.argsort(-l2_old_weights[i][j][k])
             #print(max_idx)
@@ -375,6 +370,7 @@ def weights_prune(layer_num, old_weights, new_filters):
       print("last layer fix expand filters")
 
 
+  #depth-wise conv for layers except the last layer
   if layer_num < org_num_layers-1:
     #dw_conv
     if layer_num == 0:
@@ -389,13 +385,8 @@ def weights_prune(layer_num, old_weights, new_filters):
     for i in range(len(old_weights[layer_num])):
       for j in range(len(old_weights[layer_num][i])):
 
-        #tmp = tf.math.l2_normalize(rsp_old_weights[i][j][0])
+        #choose filters with largest l2_norm remain
         l2_rsp_old_weights[i][j][0] = rsp_old_weights[i][j][0] / np.sqrt(np.sum(np.square(rsp_old_weights[i][j][0])))
-        #sess = tf.Session()
-        #tmp = sess.run(tmp)
-        #sess.close()
-        #tf.reset_default_graph()
-        #l2_rsp_old_weights[i][j][0] = tmp
 
         max_idx = np.argsort(-l2_rsp_old_weights[i][j][0])
         #print(max_idx)
@@ -430,8 +421,7 @@ def weights_prune(layer_num, old_weights, new_filters):
           
     old_weights[layer_num*2+19] = new_weights_val
 
-    #next_prj_for_add
-    #pjc_conv
+    #some layer need to be trimmd at the same time because of the Residual in MobileNetV2
     if (layer_num != 0 and layer_num != 1 and layer_num != 3 and layer_num != 6 and layer_num != 10 and layer_num != 13 and layer_num != 16):
       print("due to Add op...")
       old_weights = weights_prune(layer_num+1, old_weights, new_filters)
@@ -477,14 +467,6 @@ def train(new_filters, retrain=True, short_term=True, weights=None):
 
     train_weights.append(weights[17])
     train_weights.append(weights[53])
-
-    '''print(len(train_weights))
-
-    print(len(model.get_weights()))
-    print("\n")
-    for i in range(len(model.get_weights())):
-      print(model.get_weights()[i].shape)
-      print(train_weights[i].shape)'''
 
     model.set_weights(train_weights)
     
@@ -555,6 +537,7 @@ if __name__ == '__main__':
   print(base_time)
 
   speedup_per_iter = (base_time - base_time/tgt_speedup_ratio) / num_iters
+  #set a decay for peedup_per_iter
   print("speedup_per_iter: %lf * 0.96^n" % (speedup_per_iter))
   #print(speedup_per_iter)
 
@@ -621,32 +604,34 @@ if __name__ == '__main__':
         tmp_weights.append(old_weights)
       
       new_filters[i] = tmp_n
+      
+      #some layer need to be trimmd at the same time because of the Residual in MobileNetV2
       if i == 2:
-        print("modify 2 layer due to add op")
+        print("modify 2 layer due to Residual op")
         new_filters[i+1] = tmp_n
         i = i+2
 
       elif i ==4:
-        print("modify 3 layer due to add op")
+        print("modify 3 layer due to Residual op")
         new_filters[i+1] = tmp_n
         new_filters[i+2] = tmp_n
         i = i+3
 
       elif i ==7:
-        print("modify 4 layer due to add op")
+        print("modify 4 layer due to Residual op")
         new_filters[i+1] = tmp_n
         new_filters[i+2] = tmp_n
         new_filters[i+3] = tmp_n
         i = i+4
 
       elif i ==11:
-        print("modify 3 layer due to add op")
+        print("modify 3 layer due to Residual op")
         new_filters[i+1] = tmp_n
         new_filters[i+2] = tmp_n
         i = i+3
 
       elif i ==14:
-        print("modify 3 layer due to add op")
+        print("modify 3 layer due to Residual op")
         new_filters[i+1] = tmp_n
         new_filters[i+2] = tmp_n
         i = i+3
