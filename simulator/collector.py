@@ -21,10 +21,13 @@ def measure_time(layer_num, num_filters, num_input_channels):
   #tf.enable_eager_execution()
   delay_list = [None]*10
 
+  #1st layer:
   if layer_num == 0:  
 
+    #run 10 times and get the minimum
     for i in range(10):
       with tf.device("/cpu:0"):
+        #inputs are 224*224 images
         x = np.random.uniform(0,255,(1, 224, 224, num_input_channels))
         x = x.astype('float32')
         x = tf.constant(x)
@@ -62,10 +65,13 @@ def measure_time(layer_num, num_filters, num_input_channels):
     #print(delay_list)
     time_delay = min(delay_list) * 1000
 
+  #last layer
   elif layer_num == 17:
        
+    #run 10 times and get the minimum
     for i in range(10):     
       with tf.device("/cpu:0"):
+        #input_dim=7*7 according to MobileNetV2
         x = np.random.uniform(0,255,(1, 7, 7, num_input_channels))
         x = x.astype('float32')
         x = tf.constant(x) 
@@ -106,6 +112,7 @@ def measure_time(layer_num, num_filters, num_input_channels):
     time_delay = min(delay_list) * 1000
 
   else:
+    #input_dim are different among different layers according to MobileNetV2
     if layer_num == 1: 
       input_dim = 112
     elif (layer_num > 1 and layer_num <= 3): 
@@ -117,11 +124,13 @@ def measure_time(layer_num, num_filters, num_input_channels):
     else: 
       input_dim = 7
 
+    #set strides of conv according to MobileNetV2
     if (layer_num == 1 or layer_num == 3 or layer_num == 6 or layer_num == 13):
       dw_strides_val = [1,2,2,1]
     else:
       dw_strides_val = [1,1,1,1]   
     
+    #run 10 times and get the minimum
     for i in range(10):      
       with tf.device("/cpu:0"):
         x = np.random.uniform(0, 255,(1, input_dim, input_dim, num_input_channels))
@@ -188,6 +197,7 @@ def make_table(num_layers, max_num_filters):
   for n in range(num_layers):
     print("\n***********No.%d Layer: %d filters" % (n+1,max_num_filters[n]))
 
+    #1st layer, inputs are images
     if n == 0:  
       num_input_channels = 3
       
@@ -195,6 +205,7 @@ def make_table(num_layers, max_num_filters):
 
       table_val = np.zeros((max_num_filters[n], 1))
 
+      #collect latency of this layer with diff # of filters
       for i in range(1, max_num_filters[n]+1, 1):
         table_val[i-1][0] = measure_time(n, i, 3)
         print("***********%d filters with 3 input_channels-->time_delay: %fms" % (i,table_val[i-1][0]))
@@ -203,6 +214,7 @@ def make_table(num_layers, max_num_filters):
       #print(lookup_table)      
 
     else:
+      #other layers, inputs are outputs of last layers
       if n == 1:
         num_input_channels = max_num_filters[n-1]
 
@@ -210,14 +222,16 @@ def make_table(num_layers, max_num_filters):
 
         table_val = np.zeros((max_num_filters[n], num_input_channels))
 
+        #diff # of filters
         for i in range(1, max_num_filters[n]+1):
-          
+          #diff # of in_channles
           for k in range(1, num_input_channels+1):
             table_val[i-1][k-1] = measure_time(n, i, k)
             print("***********%d filters with %d input_channels-->time_delay: %fms" % (i,k,table_val[i-1][k-1]))
             #print(table_val[i-1][k-1])
 
       else:
+        #*6 for expand conv
         num_input_channels = max_num_filters[n-1]*6
    
         print("input channel = %d\n" % (int(num_input_channels/6)))
@@ -225,7 +239,6 @@ def make_table(num_layers, max_num_filters):
         table_val = np.zeros((max_num_filters[n], int(num_input_channels/6)))
       
         for i in range(1, max_num_filters[n]+1):
-
           for k in range(6, num_input_channels+6, 6):
             table_val[i-1][int((k-6)/6)] = measure_time(n, i, k)
             print("***********%d filters with %d input_channels-->time_delay: %fms" % (i,int(k/6),table_val[i-1][int((k-6)/6)]))
@@ -241,6 +254,7 @@ if __name__ == '__main__':
   num_layers = 18
   max_num_filters = [32,16,24,24,32,32,32,64,64,64,64,96,96,96,160,160,160,320]
   
+  #collect two sets to get minimum
   table_1 = make_table(num_layers, max_num_filters)
   table_2 = make_table(num_layers, max_num_filters)
   
@@ -252,18 +266,16 @@ if __name__ == '__main__':
   np_lookup_table = np.array(table_2)
   #np.savetxt("CPU_Celeron:table_2.txt", np_lookup_table, fmt='%s', delimiter=',')
 
-  for n in range(len(table_1)):
-    #print(len(table_1[n]))
-    
-    for i in range(len(table_1[n])):
-      #print(len(table_1[n][i]))
-      
+  #get minimum
+  for n in range(len(table_1)):  
+    for i in range(len(table_1[n])): 
       for k in range(len(table_1[n][i])):
-        print("*******%f  %f -->" % (table_1[n][i][k], table_2[n][i][k]))
+        #print("*******%f  %f -->" % (table_1[n][i][k], table_2[n][i][k]))
         if(table_1[n][i][k] > table_2[n][i][k]):
           table_1[n][i][k] = table_2[n][i][k]
         print("-->%f" % (table_1[n][i][k]))
 
+  #save data
   f = open('./CPU_table_result.pickle', 'wb')
   pickle.dump(table_1, f)
   f.close() 
